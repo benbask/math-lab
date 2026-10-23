@@ -54,6 +54,7 @@
     el.topbar = document.getElementById('topbar');
     el.view = document.getElementById('view');
     el.banner = document.getElementById('system-banner');
+    el.installBanner = document.getElementById('install-banner');
     el.nav = document.getElementById('bottom-nav');
     el.modalRoot = document.getElementById('modal-root');
     el.toastRegion = document.getElementById('toast-region');
@@ -68,6 +69,13 @@
 
     APP.route = parseRoute();
     render();
+
+    if (NS.PWA) {
+      NS.PWA.subscribe(() => {
+        renderInstallBanner();
+        if (APP.route[0] === 'settings') render();
+      });
+    }
 
     window.addEventListener('hashchange', onHashChange);
     window.addEventListener('beforeunload', () => {
@@ -200,6 +208,7 @@
     el.view.appendChild(screen);
     renderChrome();
     renderBanner();
+    renderInstallBanner();
 
     const title = pageTitle(route);
     document.title = `${title} · MathLab`;
@@ -382,6 +391,140 @@
       ),
       actions
     ));
+  }
+
+  function renderInstallBanner() {
+    if (!el.installBanner) return;
+    clear(el.installBanner);
+
+    const pwa = NS.PWA;
+    const state = pwa ? pwa.getState() : null;
+    const hidden = !state || !state.shouldShowBanner || APP.route[0] === 'play';
+    el.installBanner.hidden = hidden;
+    if (hidden) return;
+
+    const canPrompt = state.canPrompt;
+    const actions = h('div', { class: 'install-banner__actions' },
+      h('button', {
+        type: 'button',
+        class: 'btn btn--primary btn--small',
+        disabled: state.prompting,
+        onclick: performInstall
+      }, icon(canPrompt ? 'download' : 'info', 16), canPrompt ? 'Pasang' : 'Cara pasang'),
+      h('button', {
+        type: 'button',
+        class: 'btn btn--ghost btn--small',
+        onclick: () => {
+          if (pwa) pwa.dismissBanner();
+          renderInstallBanner();
+        }
+      }, 'Nanti')
+    );
+
+    el.installBanner.appendChild(h('div', { class: 'install-banner', role: 'region', 'aria-label': 'Pemasangan aplikasi' },
+      h('span', { class: 'install-banner__icon', 'aria-hidden': 'true' }, icon('download', 21)),
+      h('div', { class: 'install-banner__body' },
+        h('strong', {}, canPrompt ? 'Pasang MathLab' : 'Pasang di iPhone atau iPad'),
+        h('p', {}, canPrompt
+          ? 'Buka lebih cepat dari layar utama, seperti aplikasi biasa.'
+          : 'Tambahkan ke Layar Utama lewat menu Bagikan di Safari.')
+      ),
+      actions
+    ));
+  }
+
+  async function performInstall() {
+    const pwa = NS.PWA;
+    if (!pwa) return;
+
+    const state = pwa.getState();
+    if (state.isInstalled) {
+      showToast('MathLab sudah terpasang di perangkat ini.', { tone: 'good' });
+      return;
+    }
+    if (!state.canPrompt) {
+      showInstallHelp();
+      return;
+    }
+
+    const result = await pwa.promptInstall();
+    if (result.outcome === 'accepted') {
+      showToast('MathLab berhasil dipasang. Buka dari layar utama.', { tone: 'good' });
+    } else if (result.outcome === 'dismissed') {
+      showToast('Pemasangan dibatalkan. Kamu bisa mencoba lagi dari Pengaturan.', { tone: 'info' });
+    } else if (result.outcome === 'error') {
+      showToast('Dialog pemasangan tidak bisa dibuka. Coba dari menu browser.', { tone: 'danger' });
+    }
+  }
+
+  function showInstallHelp() {
+    const state = NS.PWA ? NS.PWA.getState() : { ios: false };
+    if (state.isInstalled) {
+      showToast('MathLab sudah terpasang di perangkat ini.', { tone: 'good' });
+      return;
+    }
+
+    const body = state.ios
+      ? h('div', {},
+        h('p', {}, 'Di iPhone dan iPad, aplikasi dipasang lewat Safari:'),
+        h('ol', { class: 'install-steps' },
+          h('li', {}, 'Buka MathLab di Safari.'),
+          h('li', {}, 'Ketuk tombol Bagikan.'),
+          h('li', {}, 'Pilih Tambah ke Layar Utama.'),
+          h('li', {}, 'Ketuk Tambah untuk menyelesaikan.')
+        ),
+        h('p', { class: 'dialog-note' }, 'Setelah dipasang, ikon MathLab muncul di layar utama dan aplikasi bisa dibuka tanpa alamat browser.')
+      )
+      : h('div', {},
+        h('p', {}, 'Buka menu browser (tiga titik), lalu pilih “Instal aplikasi” atau “Tambahkan ke layar utama”.'),
+        h('p', { class: 'dialog-note' }, 'Gunakan Chrome atau Edge versi terbaru. Jika opsi belum muncul, tunggu beberapa saat lalu muat ulang halaman.')
+      );
+
+    openDialog({
+      title: state.ios ? 'Pasang di iPhone atau iPad' : 'Pasang MathLab',
+      body,
+      confirmLabel: 'Mengerti',
+      cancelLabel: 'Tutup'
+    });
+  }
+
+  function pwaSettingsPanel() {
+    const state = NS.PWA ? NS.PWA.getState() : null;
+    const panel = h('section', { class: 'panel' }, h('h2', {}, 'Aplikasi'));
+
+    if (!state) {
+      panel.appendChild(h('p', { class: 'panel__lead' }, 'Browser ini belum mendukung pemasangan aplikasi web.'));
+      return panel;
+    }
+
+    if (state.isInstalled) {
+      panel.appendChild(h('div', { class: 'pwa-status pwa-status--installed', role: 'status' },
+        h('span', { class: 'pwa-status__icon', 'aria-hidden': 'true' }, icon('check', 22)),
+        h('div', {},
+          h('strong', {}, 'MathLab sudah terpasang'),
+          h('p', {}, 'Buka dari ikon di layar utama. Aplikasi tetap bisa dipakai offline setelah pemuatan pertama.')
+        )
+      ));
+      return panel;
+    }
+
+    panel.appendChild(h('p', { class: 'panel__lead' }, state.canPrompt
+      ? 'Pasang MathLab di perangkat ini agar bisa dibuka seperti aplikasi biasa, tanpa alamat browser.'
+      : state.ios
+        ? 'Di iPhone atau iPad, tambahkan MathLab ke Layar Utama melalui Safari agar tampil seperti aplikasi.'
+        : 'MathLab bisa dipasang dari Chrome, Edge, atau Safari versi terbaru. Jika tombol pasang belum aktif, buka panduan singkat di bawah.'
+    ));
+
+    panel.appendChild(h('div', { class: 'inline-actions' },
+      h('button', {
+        type: 'button',
+        class: 'btn btn--primary btn--small',
+        disabled: state.prompting,
+        onclick: performInstall
+      }, icon(state.canPrompt ? 'download' : 'info', 16), state.canPrompt ? 'Pasang aplikasi' : (state.ios ? 'Cara pasang' : 'Panduan pemasangan'))
+    ));
+    panel.appendChild(h('p', { class: 'form-hint' }, 'Pemasangan gratis, tanpa akun, dan tidak mengubah data profil yang sudah ada.'));
+    return panel;
   }
 
   /* ------------------------------------------------------------- welcome */
@@ -1669,6 +1812,7 @@
       )
     );
     screen.appendChild(prefPanel);
+    screen.appendChild(pwaSettingsPanel());
 
     const settingsGrid = h('div', { class: 'settings-grid' });
     settingsGrid.appendChild(h('section', { class: 'panel' },

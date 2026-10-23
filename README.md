@@ -26,6 +26,17 @@ Untuk membuka dari ponsel atau perangkat lain di Wi-Fi yang sama, jalankan `node
 
 Alternatif lain: buka langsung `math-lab/index.html` (klik dua kali). Aplikasi tidak membutuhkan build step.
 
+### Pasang sebagai aplikasi (PWA)
+
+Versi online tersedia di **https://benbask.github.io/math-lab/**.
+
+- **Android/desktop Chrome atau Edge:** buka tautan di atas, lalu klik tombol **Pasang** pada banner atau di **Pengaturan → Aplikasi**.
+- **iPhone/iPad:** buka di Safari, ketuk **Bagikan**, lalu pilih **Tambah ke Layar Utama**.
+- Setelah dipasang, MathLab tampil tanpa alamat browser dan bisa dibuka offline setelah pemuatan pertama.
+- Pemasangan memerlukan HTTPS. Alamat LAN `http://...:8000` tetap bisa dipakai untuk belajar, tetapi browser biasanya tidak menawarkan pemasangan dari HTTP biasa.
+
+Service worker menyimpan seluruh berkas aplikasi di cache. Saat mengubah berkas yang tercantum di `sw.js`, naikkan `CACHE_VERSION` agar pengguna menerima versi baru pada pembukaan berikutnya.
+
 **Catatan `file://`:** MathLab tidak mengambil file eksternal, sehingga umumnya tetap berjalan saat dibuka langsung dari `index.html`. Namun perilaku `localStorage` pada protokol `file://` berbeda antar-browser dan bisa dianggap sebagai origin terpisah atau dibatasi. Untuk penyimpanan profil, ekspor/impor, dan pengujian yang paling dapat diandalkan, gunakan server statis lokal seperti contoh di atas.
 
 Chrome/Edge modern adalah target utama. Aplikasi juga memakai layout responsif untuk ponsel Android, tablet, dan laptop.
@@ -115,8 +126,12 @@ Tahap **F — Matematika SMP** saat ini berisi aktivitas geometri dan aljabar aw
 ```text
 math-lab/
   index.html
+  manifest.webmanifest  # metadata PWA
+  sw.js                 # cache offline dan pembaruan service worker
+  serve.js              # server statis lokal tanpa dependensi
   css/
     style.css
+  icons/                # ikon PWA dan Apple Touch Icon
   js/
     utils.js            # helper DOM, matematika, aksesibilitas
     curriculum.js       # tahap, kemampuan, registri modul
@@ -125,6 +140,7 @@ math-lab/
     progress.js         # progres, penguasaan, adaptasi
     components.js       # komponen UI bersama
     modules/            # 10 modul aktivitas
+    pwa.js              # instalasi PWA dan registrasi service worker
     app.js              # routing, sesi, halaman, dialog, pengaturan
 ```
 
@@ -135,4 +151,5 @@ math-lab/
 - Profil kedua, isolasi progres, pergantian profil, penghapusan dengan konfirmasi, dan persistensi setelah reload diuji.
 - Ekspor JSON, impor valid, penggantian profil dengan ID sama, JSON tidak valid, versi skema tidak didukung, data `localStorage` rusak, dan reset total diuji.
 - Layout diperiksa pada lebar 320, 390, 820, dan 1024 piksel tanpa overflow horizontal.
+- PWA diverifikasi dengan manifest tanpa error, ikon 192/512 dan maskable, service worker aktif, dan reload offline berhasil.
 - Semua berkas JavaScript lolos pemeriksaan sintaks; tidak ada `eval`, `innerHTML` untuk data pengguna, atau permintaan jaringan eksternal.

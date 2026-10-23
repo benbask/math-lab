@@ -2006,6 +2006,11 @@ a {
   gap: 7px;
 }
 
+.install-banner__actions .btn,
+.pwa-panel .btn {
+  min-height: 40px;
+}
+
 .pwa-status {
   display: flex;
   align-items: flex-start;

@@ -490,7 +490,7 @@
 
   function pwaSettingsPanel() {
     const state = NS.PWA ? NS.PWA.getState() : null;
-    const panel = h('section', { class: 'panel' }, h('h2', {}, 'Aplikasi'));
+    const panel = h('section', { class: 'panel pwa-panel' }, h('h2', {}, 'Aplikasi'));
 
     if (!state) {
       panel.appendChild(h('p', { class: 'panel__lead' }, 'Browser ini belum mendukung pemasangan aplikasi web.'));

@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'mathlab-shell-v2';
+const CACHE_VERSION = 'mathlab-shell-v3';
 const CACHE_PREFIX = 'mathlab-shell-';
 
 const appUrl = (path) => new URL(path, self.registration.scope).href;

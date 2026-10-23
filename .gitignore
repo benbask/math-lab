@@ -1,0 +1,11 @@
+# OS and editor files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Dependencies (not used by this app, kept for safety)
+node_modules/
